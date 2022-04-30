@@ -1,8 +1,10 @@
 package znet
 
 import (
+	"errors"
 	"fmt"
 	"net"
+	"zinx/utils"
 	"zinx/ziface"
 )
 
@@ -11,20 +13,33 @@ type Server struct {
 	IPVersion string
 	IP        string
 	Port      int
+	Router    ziface.IRouter
 }
 
-func NewServer(name string) ziface.IServer {
+func NewServer() ziface.IServer {
 	s := &Server{
-		Name:      name,
+		Name:      utils.GlobalObject.Name,
 		IPVersion: "tcp4",
-		IP:        "127.0.0.1",
-		Port:      8080,
+		IP:        utils.GlobalObject.Host,
+		Port:      utils.GlobalObject.TCPPort,
+		Router:    nil,
 	}
 	return s
 }
 
+func CallBackToClient(conn *net.TCPConn, data []byte, cnt int) error {
+	fmt.Println("[Conn Handle] CallBackToClient ...")
+	if _, err := conn.Write(data[:cnt]); err != nil {
+		fmt.Println("write back buf err : ", err)
+		return errors.New("CallBackToClient error")
+	}
+
+	return nil
+}
+
 func (s *Server) Start() {
-	fmt.Printf("[START] Server name: %s,listenner at IP: %s, Port %d is starting\n", s.Name, s.IP, s.Port)
+	fmt.Printf("[Zinx] Server name : %s, Server version : %s, IP : %s:%d\n",
+		utils.GlobalObject.Name, utils.GlobalObject.Version, utils.GlobalObject.Host, utils.GlobalObject.TCPPort)
 
 	go func() {
 
@@ -39,28 +54,21 @@ func (s *Server) Start() {
 			panic(err)
 		}
 
+		var cid uint32
+		cid = 0
+
 		for {
-			conn, err := listener.Accept()
+			conn, err := listener.AcceptTCP()
+
 			if err != nil {
-				fmt.Println("Accept err : ", err)
+				fmt.Println("Accept err", err)
 				continue
 			}
 
-			go func() {
-				for {
-					buf := make([]byte, 512)
-					cnt, err := conn.Read(buf)
-					if err != nil {
-						fmt.Println("receive buf err : ", err)
-						return
-					}
+			dealConn := NewConnection(conn, cid, s.Router)
+			cid++
 
-					if _, err := conn.Write(buf[:cnt]); err != nil {
-						fmt.Println("write buf err : ", err)
-						return
-					}
-				}
-			}()
+			go dealConn.Start()
 		}
 
 	}()
@@ -74,4 +82,9 @@ func (s *Server) Serve() {
 	s.Start()
 
 	select {}
+}
+
+func (s *Server) AddRouter(router ziface.IRouter) {
+	s.Router = router
+	fmt.Println("Add Router success!")
 }

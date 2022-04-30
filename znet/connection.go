@@ -3,24 +3,25 @@ package znet
 import (
 	"fmt"
 	"net"
+	"zinx/utils"
 	"zinx/ziface"
 )
 
 type Connection struct {
-	Conn      *net.TCPConn
-	ConnId    uint32
-	handleAPI ziface.HandleFunc
-	isClose   bool
-	ExitChan  chan bool
+	Conn     *net.TCPConn
+	ConnId   uint32
+	Router   ziface.IRouter
+	isClose  bool
+	ExitChan chan bool
 }
 
-func NewConnection(conn *net.TCPConn, connId uint32, handleAPI ziface.HandleFunc) *Connection {
+func NewConnection(conn *net.TCPConn, connId uint32, router ziface.IRouter) *Connection {
 	return &Connection{
-		Conn:      conn,
-		ConnId:    connId,
-		handleAPI: handleAPI,
-		isClose:   false,
-		ExitChan:  make(chan bool, 1),
+		Conn:     conn,
+		ConnId:   connId,
+		Router:   router,
+		isClose:  false,
+		ExitChan: make(chan bool, 1),
 	}
 }
 
@@ -31,17 +32,23 @@ func (c *Connection) StartReader() {
 	defer c.Stop()
 
 	for {
-		buf := make([]byte, 512)
-		cnt, err := c.Conn.Read(buf)
+		buf := make([]byte, utils.GlobalObject.MaxPacketSize)
+		_, err := c.Conn.Read(buf)
 		if err != nil {
 			fmt.Println("receive buf err : ", err)
-			continue
-		}
-
-		if err := c.handleAPI(c.Conn, buf, cnt); err != nil {
-			fmt.Println("ConnId ", c.ConnId, "handle is error", err)
 			return
 		}
+
+		request := &Request{
+			conn: c,
+			data: buf,
+		}
+
+		go func(r ziface.IRequest) {
+			c.Router.PreHandle(r)
+			c.Router.Handle(r)
+			c.Router.PostHandle(r)
+		}(request)
 
 	}
 }
