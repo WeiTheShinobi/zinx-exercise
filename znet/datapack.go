@@ -21,7 +21,7 @@ func (dp *DataPack) GetHeadLen() uint32 {
 func (dp *DataPack) Pack(message ziface.IMessage) ([]byte, error) {
 	dataBuff := bytes.NewBuffer([]byte{})
 
-	if err := binary.Write(dataBuff, binary.LittleEndian, message.GetDataLen()); err != nil {
+	if err := binary.Write(dataBuff, binary.LittleEndian, message.GetMsgLen()); err != nil {
 		return nil, err
 	}
 
@@ -29,7 +29,7 @@ func (dp *DataPack) Pack(message ziface.IMessage) ([]byte, error) {
 		return nil, err
 	}
 
-	if err := binary.Write(dataBuff, binary.LittleEndian, message.GetData()); err != nil {
+	if err := binary.Write(dataBuff, binary.LittleEndian, message.GetMsg()); err != nil {
 		return nil, err
 	}
 

@@ -1,9 +1,10 @@
 package znet
 
 import (
+	"errors"
 	"fmt"
+	"io"
 	"net"
-	"zinx/utils"
 	"zinx/ziface"
 )
 
@@ -32,16 +33,33 @@ func (c *Connection) StartReader() {
 	defer c.Stop()
 
 	for {
-		buf := make([]byte, utils.GlobalObject.MaxPacketSize)
-		_, err := c.Conn.Read(buf)
-		if err != nil {
-			fmt.Println("receive buf err : ", err)
-			return
+		dp := NewDataPack()
+
+		headData := make([]byte, dp.GetHeadLen())
+		if _, err := io.ReadFull(c.GetTCPConnection(), headData); err != nil {
+			fmt.Println("read msg head error", err)
+			break
 		}
 
+		msg, err := dp.Unpack(headData)
+		if err != nil {
+			fmt.Println("unpack error", err)
+			break
+		}
+
+		var data []byte
+		if msg.GetMsgLen() > 0 {
+			data = make([]byte, msg.GetMsgLen())
+			if _, err := io.ReadFull(c.GetTCPConnection(), data); err != nil {
+				fmt.Println(err)
+				break
+			}
+		}
+
+		msg.SetMsg(data)
 		request := &Request{
 			conn: c,
-			data: buf,
+			msg:  msg,
 		}
 
 		go func(r ziface.IRequest) {
@@ -49,7 +67,6 @@ func (c *Connection) StartReader() {
 			c.Router.Handle(r)
 			c.Router.PostHandle(r)
 		}(request)
-
 	}
 }
 
@@ -85,6 +102,21 @@ func (c *Connection) RemoteAddr() net.Addr {
 	return c.Conn.RemoteAddr()
 }
 
-func (c *Connection) Send(data []byte) error {
-	panic("implement me")
+func (c *Connection) SendMsg(msgId uint32, data []byte) error {
+	if c.isClose {
+		return errors.New("conn is closed")
+	}
+
+	dp := NewDataPack()
+	binaryMsg, err := dp.Pack(NewMsgPackage(msgId, data))
+	if err != nil {
+		fmt.Println("pack err id = ", msgId)
+		return errors.New("pack error msg")
+	}
+
+	if _, err := c.Conn.Write(binaryMsg); err != nil {
+		return errors.New("conn write error")
+	}
+
+	return nil
 }

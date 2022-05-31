@@ -14,7 +14,7 @@ func NewMsgPackage(Id uint32, data []byte) *Message {
 	}
 }
 
-func (msg *Message) GetDataLen() uint32 {
+func (msg *Message) GetMsgLen() uint32 {
 	return msg.DataLen
 }
 
@@ -22,11 +22,11 @@ func (msg *Message) GetMsgId() uint32 {
 	return msg.Id
 }
 
-func (msg *Message) GetData() []byte {
+func (msg *Message) GetMsg() []byte {
 	return msg.Data
 }
 
-func (msg *Message) SetDataLen(len uint32) {
+func (msg *Message) SetMsgLen(len uint32) {
 	msg.DataLen = len
 }
 
@@ -34,6 +34,6 @@ func (msg *Message) SetMsgId(msgID uint32) {
 	msg.Id = msgID
 }
 
-func (msg *Message) SetData(data []byte) {
+func (msg *Message) SetMsg(data []byte) {
 	msg.Data = data
 }

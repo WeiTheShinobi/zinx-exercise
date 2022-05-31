@@ -34,9 +34,9 @@ func TestDataPack(t *testing.T) {
 						return
 					}
 
-					if msgHead.GetDataLen() > 0 {
+					if msgHead.GetMsgLen() > 0 {
 						msg := msgHead.(*Message)
-						msg.Data = make([]byte, msg.GetDataLen())
+						msg.Data = make([]byte, msg.GetMsgLen())
 
 						_, err := io.ReadFull(conn, msg.Data)
 						if err != nil {

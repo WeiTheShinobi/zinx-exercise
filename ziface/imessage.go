@@ -2,10 +2,10 @@ package ziface
 
 type IMessage interface {
 	GetMsgId() uint32
-	GetDataLen() uint32
-	GetData() []byte
+	GetMsgLen() uint32
+	GetMsg() []byte
 
 	SetMsgId(uint32)
-	SetDataLen(uint32)
-	SetData([]byte)
+	SetMsgLen(uint32)
+	SetMsg([]byte)
 }
