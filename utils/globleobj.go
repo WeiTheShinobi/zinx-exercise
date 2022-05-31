@@ -41,5 +41,5 @@ func init() {
 		MaxPacketSize: 4096,
 	}
 
-	GlobalObject.Reload()
+	//GlobalObject.Reload()
 }
