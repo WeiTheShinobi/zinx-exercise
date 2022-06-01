@@ -2,8 +2,10 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"net"
 	"time"
+	"zinx/znet"
 )
 
 func main() {
@@ -16,20 +18,37 @@ func main() {
 	}
 
 	for {
-		time.Sleep(time.Second)
-		_, err := conn.Write([]byte("Hello!"))
-		if err != nil {
-			fmt.Println("err :", err)
-			return
-		}
-
-		buf := make([]byte, 512)
-		cnt, err := conn.Read(buf)
+		dp := znet.NewDataPack()
+		binaryMsg, err := dp.Pack(znet.NewMsgPackage(1, []byte("msg test")))
 		if err != nil {
 			fmt.Println(err)
 			return
 		}
 
-		fmt.Printf("%s\n", buf[:cnt])
+		if _, err := conn.Write(binaryMsg); err != nil {
+			fmt.Println(err)
+			return
+		}
+
+		binaryHead := make([]byte, dp.GetHeadLen())
+		if _, err := io.ReadFull(conn, binaryHead); err != nil {
+			return
+		}
+
+		msgHead, err := dp.Unpack(binaryHead)
+		if err != nil {
+			return
+		}
+
+		if msgHead.GetMsgLen() > 0 {
+			msg := msgHead.(*znet.Message)
+			msg.Data = make([]byte, msgHead.GetMsgLen())
+
+			io.ReadFull(conn, msg.Data)
+
+			fmt.Println(msg.Id, " --- ", msg.GetMsgLen(), " --- ", string(msg.GetMsg()))
+		}
+
+		time.Sleep(time.Second)
 	}
 }

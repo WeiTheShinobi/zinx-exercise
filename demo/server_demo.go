@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"time"
 	"zinx/ziface"
 	"zinx/znet"
 )
@@ -12,17 +13,21 @@ type DemoRouter struct {
 
 func (r *DemoRouter) PreHandle(request ziface.IRequest) {
 	fmt.Println("preHandle")
-	request.GetConnection().GetTCPConnection().Write([]byte("ping"))
+
 }
 
 func (r *DemoRouter) Handle(request ziface.IRequest) {
 	fmt.Println("Handle")
-	request.GetConnection().GetTCPConnection().Write([]byte("mid"))
+	fmt.Println("recv from client: ID = ", request.GetMsgId(), ", data = ", string(request.GetDate()))
+
+	err := request.GetConnection().SendMsg(1, []byte(time.Now().String()))
+	if err != nil {
+		fmt.Println(err)
+	}
 }
 
 func (r *DemoRouter) PostHandle(request ziface.IRequest) {
-	fmt.Println("postHandle\n")
-	request.GetConnection().GetTCPConnection().Write([]byte("pong\n"))
+	fmt.Println("postHandle")
 }
 
 func main() {
