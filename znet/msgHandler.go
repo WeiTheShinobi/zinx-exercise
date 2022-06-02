@@ -10,6 +10,10 @@ type MsgHandler struct {
 	Apis map[uint32]ziface.IRouter
 }
 
+func NewMsgHandler() ziface.IMsgHandler {
+	return &MsgHandler{Apis: make(map[uint32]ziface.IRouter)}
+}
+
 func (mh *MsgHandler) DoMsgHandler(request ziface.IRequest) {
 	router, ok := mh.Apis[request.GetMsgId()]
 

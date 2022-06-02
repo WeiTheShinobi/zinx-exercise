@@ -9,20 +9,20 @@ import (
 )
 
 type Connection struct {
-	Conn     *net.TCPConn
-	ConnId   uint32
-	Router   ziface.IRouter
-	isClose  bool
-	ExitChan chan bool
+	Conn       *net.TCPConn
+	ConnId     uint32
+	MsgHandler ziface.IMsgHandler
+	isClose    bool
+	ExitChan   chan bool
 }
 
-func NewConnection(conn *net.TCPConn, connId uint32, router ziface.IRouter) *Connection {
+func NewConnection(conn *net.TCPConn, connId uint32, msgHandler ziface.IMsgHandler) *Connection {
 	return &Connection{
-		Conn:     conn,
-		ConnId:   connId,
-		Router:   router,
-		isClose:  false,
-		ExitChan: make(chan bool, 1),
+		Conn:       conn,
+		ConnId:     connId,
+		MsgHandler: msgHandler,
+		isClose:    false,
+		ExitChan:   make(chan bool, 1),
 	}
 }
 
@@ -57,16 +57,12 @@ func (c *Connection) StartReader() {
 		}
 
 		msg.SetMsg(data)
-		request := &Request{
+		request := Request{
 			conn: c,
 			msg:  msg,
 		}
 
-		go func(r ziface.IRequest) {
-			c.Router.PreHandle(r)
-			c.Router.Handle(r)
-			c.Router.PostHandle(r)
-		}(request)
+		go c.MsgHandler.DoMsgHandler(&request)
 	}
 }
 
