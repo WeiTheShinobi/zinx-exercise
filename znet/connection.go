@@ -14,6 +14,7 @@ type Connection struct {
 	MsgHandler ziface.IMsgHandler
 	isClose    bool
 	ExitChan   chan bool
+	MsgChan    chan []byte
 }
 
 func NewConnection(conn *net.TCPConn, connId uint32, msgHandler ziface.IMsgHandler) *Connection {
@@ -23,11 +24,12 @@ func NewConnection(conn *net.TCPConn, connId uint32, msgHandler ziface.IMsgHandl
 		MsgHandler: msgHandler,
 		isClose:    false,
 		ExitChan:   make(chan bool, 1),
+		MsgChan:    make(chan []byte),
 	}
 }
 
 func (c *Connection) StartReader() {
-	fmt.Println("Reader Goroutine is running...")
+	fmt.Println("[Reader Goroutine is running...]")
 
 	defer fmt.Println("connId = ", c.ConnId, " Reader is exit, remote addr is ", c.RemoteAddr().String())
 	defer c.Stop()
@@ -66,10 +68,29 @@ func (c *Connection) StartReader() {
 	}
 }
 
+func (c *Connection) StartWriter() {
+	fmt.Println("[Writer Goroutine is running...]")
+
+	defer fmt.Println(c.RemoteAddr().String(), " [conn Writer exit]")
+
+	for {
+		select {
+		case data := <-c.MsgChan:
+			if _, err := c.Conn.Write(data); err != nil {
+				fmt.Println(err)
+				return
+			}
+		case <-c.ExitChan:
+			return
+		}
+	}
+}
+
 func (c *Connection) Start() {
 	fmt.Println("Conn Start()... Conn Id = ", c.ConnId)
 
 	go c.StartReader()
+	go c.StartWriter()
 }
 
 func (c *Connection) Stop() {
@@ -82,7 +103,9 @@ func (c *Connection) Stop() {
 			return
 		}
 		c.isClose = true
+		c.ExitChan <- true
 		close(c.ExitChan)
+		close(c.MsgChan)
 	}
 }
 
@@ -110,9 +133,6 @@ func (c *Connection) SendMsg(msgId uint32, data []byte) error {
 		return errors.New("pack error msg")
 	}
 
-	if _, err := c.Conn.Write(binaryMsg); err != nil {
-		return errors.New("conn write error")
-	}
-
+	c.MsgChan <- binaryMsg
 	return nil
 }
