@@ -2,6 +2,6 @@ package ziface
 
 type IRequest interface {
 	GetConnection() IConnection
-	GetDate() []byte
+	GetData() []byte
 	GetMsgId() uint32
 }

@@ -41,6 +41,7 @@ func (s *Server) Start() {
 	fmt.Printf("[Zinx] Server name : %s, Server version : %s, IP : %s:%d\n",
 		utils.GlobalObject.Name, utils.GlobalObject.Version, utils.GlobalObject.Host, utils.GlobalObject.TCPPort)
 
+	s.MsgHandler.StartWorkerPool()
 	go func() {
 
 		addr, err := net.ResolveTCPAddr(s.IPVersion, fmt.Sprintf("%s:%d", s.IP, s.Port))

@@ -12,26 +12,29 @@ type DemoRouter struct {
 }
 
 func (r *DemoRouter) PreHandle(request ziface.IRequest) {
-	fmt.Println("preHandle")
 
 }
 
 func (r *DemoRouter) Handle(request ziface.IRequest) {
-	fmt.Println("Handle")
-	fmt.Println("recv from client: ID = ", request.GetMsgId(), ", data = ", string(request.GetDate()))
+	fmt.Println("--------")
+	fmt.Println("recv from client: ID = ", request.GetMsgId(), ", data = ", string(request.GetData()))
+	fmt.Println(time.Now().String())
+	fmt.Println(request.GetConnection().RemoteAddr())
 
 	err := request.GetConnection().SendMsg(1, []byte(time.Now().String()))
 	if err != nil {
 		fmt.Println(err)
 	}
+	fmt.Println("--------")
+
+	time.Sleep(time.Second)
 }
 
 func (r *DemoRouter) PostHandle(request ziface.IRequest) {
-	fmt.Println("postHandle")
 }
 
 func main() {
 	s := znet.NewServer()
-	s.AddRouter(&DemoRouter{})
+	s.AddRouter(0, &DemoRouter{})
 	s.Serve()
 }

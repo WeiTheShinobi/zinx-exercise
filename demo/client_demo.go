@@ -19,7 +19,7 @@ func main() {
 
 	for {
 		dp := znet.NewDataPack()
-		binaryMsg, err := dp.Pack(znet.NewMsgPackage(1, []byte("msg test")))
+		binaryMsg, err := dp.Pack(znet.NewMsgPackage(0, []byte("msg test")))
 		if err != nil {
 			fmt.Println(err)
 			return
