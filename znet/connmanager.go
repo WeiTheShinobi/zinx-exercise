@@ -23,7 +23,6 @@ func (connMgr *ConnManager) Add(conn ziface.IConnection) {
 	defer connMgr.connLock.Unlock()
 
 	connMgr.connections[conn.GetConnId()] = conn
-
 	fmt.Println("connection add to ConnManager: connId = ", conn.GetConnId(), " conn num = ", connMgr.Len())
 }
 

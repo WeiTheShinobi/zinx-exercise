@@ -5,21 +5,26 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"sync"
 	"zinx/utils"
 	"zinx/ziface"
 )
 
 type Connection struct {
-	Conn       *net.TCPConn
-	ConnId     uint32
-	MsgHandler ziface.IMsgHandler
-	isClose    bool
-	ExitChan   chan bool
-	MsgChan    chan []byte
+	TcpServer    ziface.IServer
+	Conn         *net.TCPConn
+	ConnId       uint32
+	MsgHandler   ziface.IMsgHandler
+	isClose      bool
+	ExitChan     chan bool
+	MsgChan      chan []byte
+	property     map[string]interface{}
+	propertyLock sync.RWMutex
 }
 
-func NewConnection(conn *net.TCPConn, connId uint32, msgHandler ziface.IMsgHandler) *Connection {
-	return &Connection{
+func NewConnection(server ziface.IServer, conn *net.TCPConn, connId uint32, msgHandler ziface.IMsgHandler) *Connection {
+	c := &Connection{
+		TcpServer:  server,
 		Conn:       conn,
 		ConnId:     connId,
 		MsgHandler: msgHandler,
@@ -27,6 +32,10 @@ func NewConnection(conn *net.TCPConn, connId uint32, msgHandler ziface.IMsgHandl
 		ExitChan:   make(chan bool, 1),
 		MsgChan:    make(chan []byte),
 	}
+
+	c.TcpServer.GetConnMgr().Add(c)
+
+	return c
 }
 
 func (c *Connection) StartReader() {
@@ -96,12 +105,16 @@ func (c *Connection) Start() {
 
 	go c.StartReader()
 	go c.StartWriter()
+
+	c.TcpServer.CallOnConnStart(c)
 }
 
 func (c *Connection) Stop() {
 	fmt.Println("Conn Stop()... Conn Id = ", c.ConnId)
 
 	if !c.isClose {
+		c.TcpServer.CallOnConnStop(c)
+
 		err := c.Conn.Close()
 		if err != nil {
 			fmt.Println(err)
@@ -109,6 +122,7 @@ func (c *Connection) Stop() {
 		}
 		c.isClose = true
 		c.ExitChan <- true
+		c.TcpServer.GetConnMgr().Remove(c)
 		close(c.ExitChan)
 		close(c.MsgChan)
 	}
@@ -140,4 +154,29 @@ func (c *Connection) SendMsg(msgId uint32, data []byte) error {
 
 	c.MsgChan <- binaryMsg
 	return nil
+}
+
+func (c *Connection) SetProperty(key string, val interface{}) {
+	c.propertyLock.Lock()
+	defer c.propertyLock.Unlock()
+
+	c.property[key] = val
+}
+
+func (c *Connection) GetProperty(key string) (interface{}, error) {
+	c.propertyLock.RLock()
+	defer c.propertyLock.RUnlock()
+
+	if val, ok := c.property[key]; ok {
+		return val, nil
+	} else {
+		return nil, errors.New("no property found")
+	}
+}
+
+func (c *Connection) RemoveProperty(key string) {
+	c.propertyLock.Lock()
+	defer c.propertyLock.Unlock()
+
+	delete(c.property, key)
 }
